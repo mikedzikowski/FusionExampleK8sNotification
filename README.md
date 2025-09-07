@@ -1,10 +1,5 @@
 # EPP Podname Detection Workflow
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/CrowdStrike/falconpy/main/docs/asset/cs-logo.png" width="300" alt="CrowdStrike Logo">
-  <h3>Kubernetes Security Automation</h3>
-</div>
-
 ## Overview
 This workflow demonstrates automated incident response for Kubernetes environments monitored by CrowdStrike Endpoint Protection Platform (EPP). The automation performs the following functions:
 
