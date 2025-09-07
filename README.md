@@ -1,7 +1,7 @@
 # EPP Podname Detection Workflow
 
 ## Overview
-This workflow automates the detection and notification process for CrowdStrike Endpoint Protection Platform (EPP) alerts in Kubernetes environments. When an EPP detection is triggered, the workflow identifies the affected Kubernetes pod, determines its namespace, and sends appropriate email notifications based on the environment (production or development).
+This workflow automates the detection and notification process for CrowdStrike Endpoint Protection Platform (EPP) alerts in Kubernetes environments. When an EPP detection is triggered, the workflow identifies the affected Kubernetes pod, determines its namespace, and sends appropriate email notifications based on the environment (production or development) and K8s annotations.
 
 ## Requirements
 1. 🔐 CrowdStrike XDR/SOAR platform with workflow capabilities
