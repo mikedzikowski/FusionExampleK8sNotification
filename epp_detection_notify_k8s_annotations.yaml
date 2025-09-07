@@ -11,7 +11,7 @@ actions:
     CreateVariable:
         next:
             - K8sQuery
-        id: 000000000000000000000000000000000
+        id: 702d15788dbbffdf0b68d8e2f3599aa4
         class: CreateVariable
         properties:
             variable_schema:
@@ -24,7 +24,7 @@ actions:
     K8sQuery:
         next:
             - Loop
-        id: 000000000000000000000000000000000
+        id: cdf5c3e0d69f156eaaf56c1f5d3f1b66
         class: Inline.QueryEvent
         inline_configuration:
             input_schema:
@@ -58,7 +58,7 @@ actions:
             config:
                 description: ""
                 end: now
-                last_modified_by: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+                last_modified_by: 6fab6973-a606-4969-8f43-fc2c993e73a2
                 repo_or_view: search-all
                 search_name: K8sQuery
                 search_query: "#repo=\"detections\" \n| \"#event_simpleName\" = \"Event_EppDetectionSummaryEvent\"\n| CompositeId=?detectionId\n| join(\n    query={\"#event_simpleName\" = K8SRunningContainerStatus \n    | replace(\"cri-o://\", with=\"\", field=K8SContainerId) \n    | replace(\"containerd://\", with=\"\", field=K8SContainerId)}, \n    field=[ContainerId], \n    key=K8SContainerId, \n    include=[K8SPodName, K8SPodNamespace, K8SName, K8SNodeName, K8SClusterId, K8SImage]\n)\n| join(\n  query={#event_simpleName=K8SResource \n          | K8SResourceKind=Namespace\n          | K8SResourceObject = /\\\"emailaddress\\\":\\\"(?<Email>.*?)\\\"/},\n          field=K8SPodNamespace,\n          key=K8SResourceName,\n          include=[Email]\n)\n| sort(@timestamp, order=desc)\n| tail(1)\n| table([K8SPodName,K8SPodNamespace,Email])"
@@ -84,7 +84,7 @@ loops:
                 - UpdateVariable
         actions:
             SendEmail:
-                id: 000000000000000000000000000000000
+                id: 07413ef9ba7c47bf5a242799f59902cc
                 properties:
                     _fields:
                         - ${K8sQuery.results.#.K8SPodNamespace}
@@ -96,7 +96,7 @@ loops:
                     to:
                         - ${WorkflowCustomVariable.email}
             SendEmail2:
-                id: 000000000000000000000000000000000
+                id: 07413ef9ba7c47bf5a242799f59902cc
                 properties:
                     _fields:
                         - ${K8sQuery.results.#.K8SPodName}
@@ -109,7 +109,7 @@ loops:
             UpdateVariable:
                 next:
                     - k8spodnamespace_instance_is_equal_to_prod
-                id: 000000000000000000000000000000000
+                id: 6c6eab39063fa3b72d98c82af60deb8a
                 class: UpdateVariable
                 properties:
                     WorkflowCustomVariable:
