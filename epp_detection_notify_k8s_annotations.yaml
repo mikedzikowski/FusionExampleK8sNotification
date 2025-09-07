@@ -1,0 +1,219 @@
+# This is an exported workflow. Editing this file is not recommended.
+
+name: EPP Podname Detection
+trigger:
+    next:
+        - CreateVariable
+    event: Investigatable/EPP
+    type: Signal
+    version_constraint: ~1
+actions:
+    CreateVariable:
+        next:
+            - K8sQuery
+        id: 000000000000000000000000000000000
+        class: CreateVariable
+        properties:
+            variable_schema:
+                properties:
+                    email:
+                        format: email
+                        type: string
+                type: object
+        version_constraint: ~1
+    K8sQuery:
+        next:
+            - Loop
+        id: 000000000000000000000000000000000
+        class: Inline.QueryEvent
+        inline_configuration:
+            input_schema:
+                $schema: https://json-schema.org/draft-07/schema
+                properties:
+                    detectionId:
+                        type: string
+                        title: DetectionId
+                        default: '*'
+                required:
+                    - detectionId
+                type: object
+                description: Generated request schema
+            output_schema:
+                $schema: https://json-schema.org/draft-07/schema
+                properties:
+                    Email:
+                        type: string
+                        format: email
+                    K8SPodName:
+                        type: string
+                        title: K8SPodName
+                    K8SPodNamespace:
+                        type: string
+                        title: K8SPodNamespace
+                required:
+                    - K8SPodName
+                    - K8SPodNamespace
+                type: object
+                description: Generated response schema
+            config:
+                description: ""
+                end: now
+                last_modified_by: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+                repo_or_view: search-all
+                search_name: K8sQuery
+                search_query: "#repo=\"detections\" \n| \"#event_simpleName\" = \"Event_EppDetectionSummaryEvent\"\n| CompositeId=?detectionId\n| join(\n    query={\"#event_simpleName\" = K8SRunningContainerStatus \n    | replace(\"cri-o://\", with=\"\", field=K8SContainerId) \n    | replace(\"containerd://\", with=\"\", field=K8SContainerId)}, \n    field=[ContainerId], \n    key=K8SContainerId, \n    include=[K8SPodName, K8SPodNamespace, K8SName, K8SNodeName, K8SClusterId, K8SImage]\n)\n| join(\n  query={#event_simpleName=K8SResource \n          | K8SResourceKind=Namespace\n          | K8SResourceObject = /\\\"emailaddress\\\":\\\"(?<Email>.*?)\\\"/},\n          field=K8SPodNamespace,\n          key=K8SResourceName,\n          include=[Email]\n)\n| sort(@timestamp, order=desc)\n| tail(1)\n| table([K8SPodName,K8SPodNamespace,Email])"
+                search_query_args:
+                    detectionId: '*'
+                start: 24h
+                tags: []
+        properties:
+            detectionId: ${data['Trigger.Detection.DetectionID']}
+            output_files_only: false
+            workflow_csv_header_fields: []
+            workflow_export_event_query_results_to_csv: false
+        version_constraint: ~1
+loops:
+    Loop:
+        display: For each Event query results; Concurrently
+        for:
+            input: K8sQuery.results
+            continue_on_partial_execution: false
+            sequential: false
+        trigger:
+            next:
+                - UpdateVariable
+        actions:
+            SendEmail:
+                id: 000000000000000000000000000000000
+                properties:
+                    _fields:
+                        - ${K8sQuery.results.#.K8SPodNamespace}
+                        - ${K8sQuery.results.#.K8SPodName}
+                        - ${Trigger.Detection.EPP.URL}
+                    msg: 'PROD - EPP Detection  on  ${data[''K8sQuery.results.#.K8SPodName'']} on  ${data[''K8sQuery.results.#.K8SPodNamespace'']} '
+                    msg_type: html
+                    subject: 'PROD - EPP Detection '
+                    to:
+                        - ${WorkflowCustomVariable.email}
+            SendEmail2:
+                id: 000000000000000000000000000000000
+                properties:
+                    _fields:
+                        - ${K8sQuery.results.#.K8SPodName}
+                        - ${Trigger.Detection.EPP.URL}
+                    msg: DEV - EPP Detection on  ${data['K8sQuery.results.#.K8SPodNamespace']} on ${data['K8sQuery.results.#.K8SPodNamespace']}
+                    msg_type: html
+                    subject: DEV - EPP Detection
+                    to:
+                        - michael.dzikowski@cloudstrike.com
+            UpdateVariable:
+                next:
+                    - k8spodnamespace_instance_is_equal_to_prod
+                id: 000000000000000000000000000000000
+                class: UpdateVariable
+                properties:
+                    WorkflowCustomVariable:
+                        email: ${K8sQuery.results.#.Email}
+                version_constraint: ~1
+        conditions:
+            k8spodnamespace_instance_is_equal_to_dev:
+                next:
+                    - SendEmail2
+                expression: K8sQuery.results.#.K8SPodNamespace:'dev'
+                display:
+                    - K8SPodNamespace instance is equal to dev
+            k8spodnamespace_instance_is_equal_to_prod:
+                next:
+                    - SendEmail
+                expression: K8sQuery.results.#.K8SPodNamespace:'prod'
+                display:
+                    - K8SPodNamespace instance is equal to prod
+                else_if: k8spodnamespace_instance_is_equal_to_dev
+output_fields:
+    - K8sQuery.result_fields
+    - K8sQuery.file_csv
+    - K8sQuery.event_count
+    - K8sQuery.event_query_name
+    - K8sQuery.results
+    - K8sQuery.download_url
+    - K8sQuery.raw_results
+    - K8sQuery.file_info
+    - K8sQuery._reference_links
+    - Trigger.Detection.EPP.Behavior.PatternDispositionID
+    - Trigger.Detection.EPP.Process.AssociatedFiles
+    - Trigger.Detection.EPP.Behavior.BehaviorID
+    - Trigger.Detection.EPP.Behavior.Objective
+    - Trigger.Detection.EPP.Behavior.Timestamp
+    - Trigger.Detection.EPP.Process.ThreatGraphProcessID
+    - Trigger.Detection.EPP.Process.CommandLine
+    - Trigger.Detection.EPP.Behavior.CustomIOARuleInstanceID
+    - Trigger.Detection.Description
+    - Trigger.Detection.DetectionID
+    - Trigger.Detection.EPP.EPPDetectionType
+    - Trigger.Detection.EPP.Process.MD5
+    - Trigger.Detection.EPP.Process.SHA256
+    - Trigger.Detection.EPP.Process.FilePath
+    - Trigger.Detection.EPP.GrandParentProcess.AssociatedFiles
+    - Trigger.Detection.EPP.GrandParentProcess.ThreatGraphProcessID
+    - Trigger.Detection.EPP.GrandParentProcess.CommandLine
+    - Trigger.Detection.EPP.GrandParentProcess.MD5
+    - Trigger.Detection.EPP.GrandParentProcess.SHA256
+    - Trigger.Detection.EPP.GrandParentProcess.FilePath
+    - Trigger.Detection.EPP.GrandParentProcess.ImageFileName
+    - Trigger.Detection.EPP.GrandParentProcess.LocalProcessID
+    - Trigger.Detection.EPP.GrandParentProcess.UserName
+    - Trigger.Detection.EPP.Behavior.IOADescription
+    - Trigger.Detection.EPP.Behavior.IOAName
+    - Trigger.Detection.EPP.Behavior.IOCType
+    - Trigger.Detection.EPP.Behavior.IOCValue
+    - Trigger.Detection.EPP.Process.ImageFileName
+    - Trigger.Detection.EPP.LastUpdate
+    - Trigger.Detection.MitreAttack
+    - Trigger.Detection.Name
+    - Trigger.Detection.EPP.Process.LocalProcessID
+    - Trigger.Detection.EPP.ParentProcess.AssociatedFiles
+    - Trigger.Detection.EPP.ParentProcess.ThreatGraphProcessID
+    - Trigger.Detection.EPP.ParentProcess.CommandLine
+    - Trigger.Detection.EPP.ParentProcess.MD5
+    - Trigger.Detection.EPP.ParentProcess.SHA256
+    - Trigger.Detection.EPP.ParentProcess.FilePath
+    - Trigger.Detection.EPP.ParentProcess.ImageFileName
+    - Trigger.Detection.EPP.ParentProcess.LocalProcessID
+    - Trigger.Detection.EPP.ParentProcess.UserName
+    - Trigger.Detection.EPP.Sensor.BiosManufacturer
+    - Trigger.Detection.EPP.Sensor.BiosVersion
+    - Trigger.Detection.EPP.Sensor.CloudInstanceID
+    - Trigger.Detection.EPP.Sensor.CloudServiceProvider
+    - Trigger.Detection.EPP.Sensor.CloudServiceProviderAccountID
+    - Trigger.Detection.EPP.Sensor.Domain
+    - Trigger.Detection.EPP.Sensor.ExternalIP
+    - Trigger.Detection.EPP.Sensor.ExternalIPv6
+    - Trigger.Detection.EPP.Sensor.GroupNames
+    - Trigger.Detection.EPP.Sensor.Groups
+    - Trigger.Detection.EPP.Sensor.SensorID
+    - Trigger.Detection.EPP.Sensor.Tags
+    - Trigger.Detection.EPP.Sensor.ProductType
+    - Trigger.Detection.EPP.Sensor.Hostname
+    - Trigger.Detection.EPP.Sensor.LocalIP
+    - Trigger.Detection.EPP.Sensor.LocalIPv6
+    - Trigger.Detection.EPP.Sensor.MacAddress
+    - Trigger.Detection.EPP.Sensor.OSVersion
+    - Trigger.Detection.EPP.Sensor.OU
+    - Trigger.Detection.EPP.Sensor.Platform
+    - Trigger.Detection.EPP.Sensor.SiteName
+    - Trigger.Detection.EPP.Sensor.SystemManufacturer
+    - Trigger.Detection.EPP.Sensor.SystemProductName
+    - Trigger.Detection.EPP.Sensor.SensorVersion
+    - Trigger.Detection.Severity
+    - Trigger.Detection.Status
+    - Trigger.Detection.EPP.Behavior.TacticName
+    - Trigger.Detection.TacticNames
+    - Trigger.Detection.Tags
+    - Trigger.Detection.EPP.Behavior.TechniqueName
+    - Trigger.Detection.TechniqueNames
+    - Trigger.Detection.EPP.URL
+    - Trigger.Detection.EPP.Behavior.UserSID
+    - Trigger.Detection.EPP.Process.UserName
+    - Trigger.Detection.XDREventID
+    - Workflow.Definition.Description
+    - Workflow.Definition.Name
