@@ -58,7 +58,9 @@ actions:
             config:
                 description: ""
                 end: now
-                last_modified_by: 6fab6973-a606-4969-8f43-fc2c993e73a2
+                last_modified_by: e9d1738c-09f3-49a9-80f4-f86230f823d7
+                last_modified_by_user:
+                    email: ${K8sQuery.results.#.Email}
                 repo_or_view: search-all
                 search_name: K8sQuery
                 search_query: "#repo=\"detections\" \n| \"#event_simpleName\" = \"Event_EppDetectionSummaryEvent\"\n| CompositeId=?detectionId\n| join(\n    query={\"#event_simpleName\" = K8SRunningContainerStatus \n    | replace(\"cri-o://\", with=\"\", field=K8SContainerId) \n    | replace(\"containerd://\", with=\"\", field=K8SContainerId)}, \n    field=[ContainerId], \n    key=K8SContainerId, \n    include=[K8SPodName, K8SPodNamespace, K8SName, K8SNodeName, K8SClusterId, K8SImage]\n)\n| join(\n  query={#event_simpleName=K8SResource \n          | K8SResourceKind=Namespace\n          | K8SResourceObject = /\\\"emailaddress\\\":\\\"(?<Email>.*?)\\\"/},\n          field=K8SPodNamespace,\n          key=K8SResourceName,\n          include=[Email]\n)\n| sort(@timestamp, order=desc)\n| tail(1)\n| table([K8SPodName,K8SPodNamespace,Email])"
@@ -105,7 +107,7 @@ loops:
                     msg_type: html
                     subject: DEV - EPP Detection
                     to:
-                        - michael.dzikowski@cloudstrike.com
+                        - ${WorkflowCustomVariable.email}
             UpdateVariable:
                 next:
                     - k8spodnamespace_instance_is_equal_to_prod
